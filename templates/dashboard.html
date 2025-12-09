@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply Chain Intelligence | Inventory Analytics</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-boxes-stacked brand-icon"></i>
+                <div class="brand-name">Inventory<span style="color:var(--accent-color)">IQ</span></div>
+            </div>
+            
+            <ul class="nav-links">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-target="dashboard">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="shortages">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Shortages</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="critical">
+                        <i class="fas fa-radiation"></i>
+                        <span>Critical Items</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="abundant">
+                        <i class="fas fa-layer-group"></i>
+                        <span>Abundant Stock</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="shipping">
+                        <i class="fas fa-truck-fast"></i>
+                        <span>Transfers</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="site-inventory">
+                        <i class="fas fa-warehouse"></i>
+                        <span>Site Details</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="bottlenecks">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Bottlenecks</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="focus-areas">
+                        <i class="fas fa-bullseye"></i>
+                        <span>Focus Areas</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="movements">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Move Items</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="page-title">
+                    <h1 id="pageTitle">Executive Overview</h1>
+                    <p id="pageSubtitle">Multi-Site Inventory Analysis & Optimization</p>
+                </div>
+                <div class="last-updated" id="lastUpdated">
+                    Last updated: Just now
+                </div>
+            </div>
+
+            <!-- DASHBOARD VIEW (Only visible on Dashboard tab) -->
+            <div id="dashboard-view">
+                <!-- KPI Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">Sites Active</span>
+                            <i class="fas fa-network-wired stat-icon"></i>
+                        </div>
+                        <div class="stat-value" id="totalSites">-</div>
+                        <div class="stat-trend trend-neutral">
+                            <i class="fas fa-minus"></i>
+                            <span>Operational</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">Total SKU Count</span>
+                            <i class="fas fa-barcode stat-icon"></i>
+                        </div>
+                        <div class="stat-value" id="totalMaterials">-</div>
+                        <div class="stat-trend trend-neutral">
+                            <i class="fas fa-check"></i>
+                            <span>Catalog Items</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">Total Inventory Volume</span>
+                            <i class="fas fa-cubes stat-icon"></i>
+                        </div>
+                        <div class="stat-value" id="totalQuantity">-</div>
+                        <div class="stat-trend trend-up">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>Units across network</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-title">Shortage Alerts</span>
+                            <i class="fas fa-bell stat-icon" style="color: #ef4444; background: #fee2e2;"></i>
+                        </div>
+                        <div class="stat-value" id="negativeItems" style="color: #ef4444">-</div>
+                        <div class="stat-trend trend-down">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>Items below threshold</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Stock Distribution by Plant</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="siteChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Inventory Health</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="distributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actionable Insights -->
+                <div class="charts-row" style="grid-template-columns: 1fr 1fr;">
+                    <div class="chart-card" style="height: auto;">
+                        <div class="card-header">
+                            <h3 class="card-title">Top Shortages by Value</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Plant</th>
+                                        <th>Storage</th>
+                                        <th>Material</th>
+                                        <th>Qty</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topShortagesBody">
+                                    <tr><td colspan="5" style="text-align:center; padding:1rem;">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="chart-card" style="height: auto;">
+                        <div class="card-header">
+                            <h3 class="card-title">Inactive / Obsolete Stock</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Plant</th>
+                                        <th>Storage</th>
+                                        <th>Material</th>
+                                        <th>Qty</th>
+                                        <th>Last Active</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inactiveBody">
+                                    <tr><td colspan="5" style="text-align:center; padding:1rem;">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DATA VIEW (Visible on other tabs) -->
+            <div id="data-view" class="data-section hidden">
+                <div class="section-header">
+                    <h3 class="card-title" id="sectionTitle">Data View</h3>
+                    
+                    <div class="controls">
+                        <!-- Site Selector (Hidden by default) -->
+                        <div class="select-wrapper hidden" id="siteSelectorContainer">
+                            <select id="siteSelector" style="padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
+                                <option value="">All Sites</option>
+                            </select>
+                        </div>
+
+                        <!-- Search Box -->
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="tableSearch" placeholder="Search materials, sites...">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table>
+                        <thead id="tableHeaders">
+                            <!-- Headers injected by JS -->
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Data injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ITEM DETAILS MODAL -->
+    <div id="detailsModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Material Details</h2>
+                <button onclick="closeModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="modalLoading" class="hidden text-center py-4">
+                    <div class="spinner mx-auto"></div>
+                </div>
+                <div id="modalData">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script src="/static/js/dashboard.js"></script>
+    
+    <style>
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            line-height: 1;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        
+        .modal-section {
+            margin-bottom: 2rem;
+        }
+        
+        .modal-section h3 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+
+        .transaction-list {
+            font-size: 0.875rem;
+        }
+        
+        .transaction-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+        
+        .tx-date { color: var(--text-secondary); width: 100px; }
+        .tx-type { font-weight: 500; width: 80px; }
+        .tx-qty { font-weight: 600; text-align: right; width: 80px; }
+        .tx-loc { color: var(--text-secondary); width: 150px; text-align: right; }
+    </style>
+</body>
+</html>
