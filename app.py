@@ -5,10 +5,18 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
+
+# Use /tmp for uploads on Vercel (serverless), otherwise use uploads folder
+if os.environ.get('VERCEL'):
+    app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+else:
+    app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 
 # Create uploads directory if it doesn't exist
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+try:
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+except Exception:
+    pass  # Ignore errors if directory creation fails
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
@@ -23,30 +31,54 @@ analyzer = None
 def get_analyzer():
     """Get or create analyzer instance"""
     global analyzer, EXCEL_FILE
-    if analyzer is None or not os.path.exists(EXCEL_FILE):
-        # Try to find the file in uploads folder or current directory
-        if not os.path.exists(EXCEL_FILE):
-            # Look for any xlsx file in uploads folder
-            uploads_dir = app.config['UPLOAD_FOLDER']
-            if os.path.exists(uploads_dir):
-                xlsx_files = [f for f in os.listdir(uploads_dir) if f.endswith(('.xlsx', '.xls'))]
-                if xlsx_files:
-                    EXCEL_FILE = os.path.join(uploads_dir, xlsx_files[-1])  # Use most recent
-        
-        if os.path.exists(EXCEL_FILE):
-            analyzer = InventoryAnalyzer(EXCEL_FILE)
+    try:
+        if analyzer is None or not os.path.exists(EXCEL_FILE):
+            # Try to find the file in uploads folder or current directory
+            if not os.path.exists(EXCEL_FILE):
+                # Look for any xlsx file in uploads folder
+                uploads_dir = app.config['UPLOAD_FOLDER']
+                if os.path.exists(uploads_dir):
+                    try:
+                        xlsx_files = [f for f in os.listdir(uploads_dir) if f.endswith(('.xlsx', '.xls'))]
+                        if xlsx_files:
+                            EXCEL_FILE = os.path.join(uploads_dir, xlsx_files[-1])  # Use most recent
+                    except Exception:
+                        pass
+            
+            if os.path.exists(EXCEL_FILE):
+                analyzer = InventoryAnalyzer(EXCEL_FILE)
+    except Exception as e:
+        # Return None if analyzer can't be created - will be handled by error handlers
+        print(f"Error creating analyzer: {e}")
+        return None
+    
+    if analyzer is None:
+        raise Exception("No Excel file found. Please upload a file first.")
+    
     return analyzer
 
 @app.route('/')
 def index():
     """Main dashboard page"""
+    try:
+        # Try to get analyzer to check if file exists
+        analyzer = get_analyzer()
+        if analyzer is None:
+            # Return a page with upload prompt
+            return render_template('dashboard.html'), 200
+    except Exception:
+        # If analyzer fails, still show the page (user can upload)
+        pass
     return render_template('dashboard.html')
 
 @app.route('/api/dashboard/stats')
 def dashboard_stats():
     """Get overall dashboard statistics"""
     try:
-        stats = get_analyzer().get_dashboard_stats()
+        analyzer = get_analyzer()
+        if analyzer is None:
+            return jsonify({'error': 'No Excel file found. Please upload a file first.'}), 404
+        stats = analyzer.get_dashboard_stats()
         return jsonify(stats)
     except Exception as e:
         return jsonify({'error': str(e)}), 500

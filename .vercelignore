@@ -6,7 +6,7 @@ __pycache__
 env/
 venv/
 .venv/
-*.xlsx
 .git
 .gitignore
+# Note: Excel files are excluded but can be uploaded via web interface
 
