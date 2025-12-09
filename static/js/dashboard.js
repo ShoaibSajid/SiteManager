@@ -37,6 +37,23 @@ function setupEventListeners() {
             loadSiteInventory(e.target.value);
         });
     }
+
+    // File upload
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    
+    if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                uploadFile(file);
+            }
+        });
+    }
 }
 
 async function initializeDashboard() {
@@ -830,5 +847,94 @@ async function loadInactiveStock() {
         `).join('');
     } catch (e) {
         body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:1rem;">Error loading data</td></tr>';
+    }
+}
+
+// File Upload Functions
+async function uploadFile(file) {
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadStatus = document.getElementById('uploadStatus');
+    const fileInput = document.getElementById('fileInput');
+    
+    // Validate file type
+    const validTypes = ['.xlsx', '.xls'];
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+    
+    if (!validTypes.includes(fileExtension)) {
+        showUploadStatus('error', 'Please upload an Excel file (.xlsx or .xls)');
+        fileInput.value = '';
+        return;
+    }
+    
+    // Validate file size (50MB max)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+        showUploadStatus('error', 'File size exceeds 50MB limit');
+        fileInput.value = '';
+        return;
+    }
+    
+    // Create FormData
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Update UI
+    uploadBtn.classList.add('uploading');
+    uploadBtn.disabled = true;
+    showUploadStatus('processing', `Uploading ${file.name}...`);
+    
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            showUploadStatus('success', `File uploaded successfully! Processing ${result.stats.total_items} items...`);
+            
+            // Reload all dashboard data after a short delay
+            setTimeout(async () => {
+                try {
+                    // Reset analyzer by reloading page or reinitializing
+                    await initializeDashboard();
+                    showUploadStatus('success', 'Dashboard updated with new data!');
+                    
+                    // Hide status after 3 seconds
+                    setTimeout(() => {
+                        hideUploadStatus();
+                    }, 3000);
+                } catch (error) {
+                    console.error('Error reloading dashboard:', error);
+                    showUploadStatus('error', 'File uploaded but failed to reload dashboard. Please refresh the page.');
+                }
+            }, 1000);
+        } else {
+            showUploadStatus('error', result.error || 'Upload failed. Please try again.');
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        showUploadStatus('error', 'Network error. Please check your connection and try again.');
+    } finally {
+        uploadBtn.classList.remove('uploading');
+        uploadBtn.disabled = false;
+        fileInput.value = ''; // Reset file input
+    }
+}
+
+function showUploadStatus(type, message) {
+    const uploadStatus = document.getElementById('uploadStatus');
+    if (!uploadStatus) return;
+    
+    uploadStatus.textContent = message;
+    uploadStatus.className = `upload-status ${type}`;
+    uploadStatus.classList.remove('hidden');
+}
+
+function hideUploadStatus() {
+    const uploadStatus = document.getElementById('uploadStatus');
+    if (uploadStatus) {
+        uploadStatus.classList.add('hidden');
     }
 }

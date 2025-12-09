@@ -1,8 +1,20 @@
 from flask import Flask, render_template, jsonify, request
 from data_processor import InventoryAnalyzer
 import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
+
+# Create uploads directory if it doesn't exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Allowed file extensions
+ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Initialize analyzer
 EXCEL_FILE = os.getenv('EXCEL_FILE', 'Data Jul-Nov 2025.xlsx')
@@ -10,9 +22,19 @@ analyzer = None
 
 def get_analyzer():
     """Get or create analyzer instance"""
-    global analyzer
-    if analyzer is None:
-        analyzer = InventoryAnalyzer(EXCEL_FILE)
+    global analyzer, EXCEL_FILE
+    if analyzer is None or not os.path.exists(EXCEL_FILE):
+        # Try to find the file in uploads folder or current directory
+        if not os.path.exists(EXCEL_FILE):
+            # Look for any xlsx file in uploads folder
+            uploads_dir = app.config['UPLOAD_FOLDER']
+            if os.path.exists(uploads_dir):
+                xlsx_files = [f for f in os.listdir(uploads_dir) if f.endswith(('.xlsx', '.xls'))]
+                if xlsx_files:
+                    EXCEL_FILE = os.path.join(uploads_dir, xlsx_files[-1])  # Use most recent
+        
+        if os.path.exists(EXCEL_FILE):
+            analyzer = InventoryAnalyzer(EXCEL_FILE)
     return analyzer
 
 @app.route('/')
@@ -160,6 +182,52 @@ def all_inventory():
         return jsonify(inventory)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/upload', methods=['POST'])
+def upload_file():
+    """Handle Excel file upload"""
+    global analyzer, EXCEL_FILE
+    
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Invalid file type. Please upload an Excel file (.xlsx or .xls)'}), 400
+        
+        # Save the file
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Update global variables
+        EXCEL_FILE = filepath
+        analyzer = None  # Reset analyzer to force reload
+        
+        # Test if file can be processed
+        try:
+            test_analyzer = InventoryAnalyzer(EXCEL_FILE)
+            stats = test_analyzer.get_dashboard_stats()
+            
+            return jsonify({
+                'success': True,
+                'message': 'File uploaded and processed successfully',
+                'filename': filename,
+                'stats': stats
+            })
+        except Exception as e:
+            # If processing fails, delete the file
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            return jsonify({'error': f'Failed to process file: {str(e)}'}), 400
+            
+    except Exception as e:
+        return jsonify({'error': f'Upload failed: {str(e)}'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
