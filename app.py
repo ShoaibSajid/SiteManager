@@ -24,7 +24,7 @@ ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Initialize analyzer
+# Initialize analyzer - lazy loading to avoid import errors
 EXCEL_FILE = os.getenv('EXCEL_FILE', 'Data Jul-Nov 2025.xlsx')
 analyzer = None
 
@@ -32,28 +32,47 @@ def get_analyzer():
     """Get or create analyzer instance"""
     global analyzer, EXCEL_FILE
     try:
-        if analyzer is None or not os.path.exists(EXCEL_FILE):
-            # Try to find the file in uploads folder or current directory
-            if not os.path.exists(EXCEL_FILE):
-                # Look for any xlsx file in uploads folder
-                uploads_dir = app.config['UPLOAD_FOLDER']
-                if os.path.exists(uploads_dir):
-                    try:
-                        xlsx_files = [f for f in os.listdir(uploads_dir) if f.endswith(('.xlsx', '.xls'))]
-                        if xlsx_files:
-                            EXCEL_FILE = os.path.join(uploads_dir, xlsx_files[-1])  # Use most recent
-                    except Exception:
-                        pass
+        if analyzer is None:
+            # Try to find the file in multiple locations
+            possible_paths = [
+                EXCEL_FILE,  # Original path
+                os.path.join(os.getcwd(), EXCEL_FILE),  # Current directory
+                os.path.join(app.config['UPLOAD_FOLDER'], EXCEL_FILE),  # Uploads folder
+            ]
             
-            if os.path.exists(EXCEL_FILE):
+            # Also check for any xlsx files in uploads folder
+            uploads_dir = app.config['UPLOAD_FOLDER']
+            if os.path.exists(uploads_dir):
+                try:
+                    xlsx_files = [f for f in os.listdir(uploads_dir) if f.endswith(('.xlsx', '.xls'))]
+                    if xlsx_files:
+                        possible_paths.append(os.path.join(uploads_dir, xlsx_files[-1]))
+                except Exception:
+                    pass
+            
+            # Try each possible path
+            found_file = None
+            for path in possible_paths:
+                try:
+                    if os.path.exists(path):
+                        found_file = path
+                        break
+                except Exception:
+                    continue
+            
+            if found_file:
+                EXCEL_FILE = found_file
                 analyzer = InventoryAnalyzer(EXCEL_FILE)
+            else:
+                # No file found - return None (will be handled by route handlers)
+                return None
+                
     except Exception as e:
-        # Return None if analyzer can't be created - will be handled by error handlers
+        # Log error but don't fail - let route handlers deal with it
+        import traceback
         print(f"Error creating analyzer: {e}")
+        traceback.print_exc()
         return None
-    
-    if analyzer is None:
-        raise Exception("No Excel file found. Please upload a file first.")
     
     return analyzer
 
@@ -77,7 +96,18 @@ def dashboard_stats():
     try:
         analyzer = get_analyzer()
         if analyzer is None:
-            return jsonify({'error': 'No Excel file found. Please upload a file first.'}), 404
+            return jsonify({
+                'error': 'No Excel file found. Please upload a file first.',
+                'total_items': 0,
+                'total_sites': 0,
+                'total_materials': 0,
+                'negative_items': 0,
+                'positive_items': 0,
+                'total_quantity': 0,
+                'total_value': 0,
+                'avg_quantity': 0,
+                'median_quantity': 0
+            }), 200  # Return 200 with empty stats instead of 404
         stats = analyzer.get_dashboard_stats()
         return jsonify(stats)
     except Exception as e:
