@@ -297,6 +297,7 @@ function switchTab(tabId) {
 
 // Table Rendering Functions
 async function loadShortages() {
+    restoreTableStructure();
     renderLoadingTable();
     const res = await fetch('/api/items/shortages');
     const data = await res.json();
@@ -315,6 +316,7 @@ async function loadShortages() {
 }
 
 async function loadCritical() {
+    restoreTableStructure();
     renderLoadingTable();
     const res = await fetch('/api/items/critical');
     const data = await res.json();
@@ -333,6 +335,7 @@ async function loadCritical() {
 }
 
 async function loadAbundant() {
+    restoreTableStructure();
     renderLoadingTable();
     const res = await fetch('/api/items/abundant');
     const data = await res.json();
@@ -351,6 +354,7 @@ async function loadAbundant() {
 }
 
 async function loadShipping() {
+    restoreTableStructure();
     renderLoadingTable();
     const res = await fetch('/api/recommendations/shipping');
     const data = await res.json();
@@ -368,6 +372,7 @@ async function loadShipping() {
 }
 
 async function loadSiteInventory(site = '') {
+    restoreTableStructure();
     renderLoadingTable();
     const url = site ? `/api/site/${site}/inventory` : '/api/inventory/all';
     const res = await fetch(url);
@@ -390,7 +395,10 @@ async function loadSiteInventory(site = '') {
 }
 
 async function loadBottlenecks() {
+    // Ensure standard table structure exists first
+    restoreTableStructure();
     renderLoadingTable();
+    
     const res = await fetch('/api/analysis/bottlenecks');
     const data = await res.json();
     
@@ -402,7 +410,16 @@ async function loadBottlenecks() {
     });
     html += '</div><div id="bottleneckContent"></div>';
     
-    document.getElementById('tableBody').parentElement.parentElement.innerHTML = html;
+    const tableContainer = document.querySelector('.table-responsive');
+    if (tableContainer) {
+        tableContainer.innerHTML = html;
+    } else {
+        // Fallback: find parent and replace
+        const tbody = document.getElementById('tableBody');
+        if (tbody && tbody.parentElement && tbody.parentElement.parentElement) {
+            tbody.parentElement.parentElement.innerHTML = html;
+        }
+    }
     
     // Store data globally for tab switching
     window.bottleneckData = data;
@@ -466,7 +483,10 @@ function renderBottleneckTab(type) {
 }
 
 async function loadFocusAreas() {
+    // Ensure standard table structure exists first
+    restoreTableStructure();
     renderLoadingTable();
+    
     const res = await fetch('/api/analysis/focus-areas');
     const data = await res.json();
     
@@ -484,7 +504,16 @@ async function loadFocusAreas() {
     });
     html += '</div><div id="focusContent"></div>';
     
-    document.getElementById('tableBody').parentElement.parentElement.innerHTML = html;
+    const tableContainer = document.querySelector('.table-responsive');
+    if (tableContainer) {
+        tableContainer.innerHTML = html;
+    } else {
+        // Fallback: find parent and replace
+        const tbody = document.getElementById('tableBody');
+        if (tbody && tbody.parentElement && tbody.parentElement.parentElement) {
+            tbody.parentElement.parentElement.innerHTML = html;
+        }
+    }
     
     window.focusData = data;
     renderFocusTab('high_value');
@@ -551,7 +580,10 @@ function renderFocusTab(type) {
 }
 
 async function loadMovements() {
+    // Ensure standard table structure exists (restore if it was replaced)
+    restoreTableStructure();
     renderLoadingTable();
+    
     const res = await fetch('/api/recommendations/movements');
     const data = await res.json();
     currentData = data;
@@ -712,9 +744,42 @@ function updateSortIcons(activeKey, direction) {
 }
 
 // Utility Helpers
+function restoreTableStructure() {
+    // Restore standard table structure if it was replaced by custom tabs
+    const dataView = document.getElementById('data-view');
+    if (!dataView) return;
+    
+    const tableContainer = dataView.querySelector('.table-responsive');
+    if (!tableContainer || !tableContainer.querySelector('table')) {
+        // Recreate table structure
+        const sectionHeader = dataView.querySelector('.section-header');
+        if (sectionHeader && sectionHeader.nextElementSibling) {
+            const newTable = document.createElement('div');
+            newTable.className = 'table-responsive';
+            newTable.innerHTML = `
+                <table>
+                    <thead id="tableHeaders"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            `;
+            // Remove old content and add new table
+            let nextSibling = sectionHeader.nextElementSibling;
+            while (nextSibling) {
+                const toRemove = nextSibling;
+                nextSibling = nextSibling.nextElementSibling;
+                toRemove.remove();
+            }
+            sectionHeader.insertAdjacentElement('afterend', newTable);
+        }
+    }
+}
+
 function renderLoadingTable() {
+    restoreTableStructure();
     const tbody = document.getElementById('tableBody');
-    tbody.innerHTML = '<tr><td colspan="100%" class="text-center py-4"><div class="spinner mx-auto"></div></td></tr>';
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="100%" class="text-center py-4"><div class="spinner mx-auto"></div></td></tr>';
+    }
 }
 
 let currentColumns = []; 
