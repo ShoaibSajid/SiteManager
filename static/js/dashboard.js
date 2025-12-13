@@ -654,7 +654,7 @@ function renderModalContent(data, materialId) {
                     <div class="stat-header" style="margin-bottom: 0.5rem;">
                         <span class="stat-title">Total Value</span>
                     </div>
-                    <div class="stat-value" style="font-size: 1.5rem;">${Number(totalValue).toLocaleString(undefined, {style: 'currency', currency: 'USD'})}</div>
+                    <div class="stat-value" style="font-size: 1.5rem;">PKR ${Number(totalValue).toLocaleString()}</div>
                 </div>
             </div>
         </div>
@@ -677,7 +677,7 @@ function renderModalContent(data, materialId) {
                                 <td style="padding: 0.5rem;">${loc.Site}</td>
                                 <td style="padding: 0.5rem;">${loc['Storage Location']}</td>
                                 <td style="padding: 0.5rem; font-weight: 600;">${Number(loc.Quantity).toLocaleString()}</td>
-                                <td style="padding: 0.5rem;">${Number(loc.Value).toLocaleString(undefined, {style: 'currency', currency: 'USD'})}</td>
+                                <td style="padding: 0.5rem;">PKR ${Number(loc.Value).toLocaleString()}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -815,7 +815,7 @@ function renderTable(data, columns, headerId = 'tableHeaders', bodyId = 'tableBo
                 let val = row[col.key];
                 
                 if (col.format === 'number') val = Number(val).toLocaleString();
-                if (col.format === 'currency') val = Number(val).toLocaleString(undefined, {style: 'currency', currency: 'USD'});
+                if (col.format === 'currency') val = 'PKR ' + Number(val).toLocaleString();
                 
                 if (col.type === 'link') {
                     return `<td><a href="#" onclick="openModal('${val}'); return false;" class="text-blue-500 hover:underline font-medium">${val}</a></td>`;
@@ -883,7 +883,7 @@ async function loadTopShortages() {
                 <td>${row['Storage Location']}</td>
                 <td><a href="#" onclick="openModal('${row.Material}'); return false;" class="text-blue-500 hover:underline">${row.Material}</a></td>
                 <td class="${row['Current Quantity'] < 0 ? 'text-danger' : 'text-muted'}">${Number(row['Current Quantity']).toLocaleString()}</td>
-                <td>${Number(row['Total Value']).toLocaleString(undefined, {style:'currency', currency:'USD'})}</td>
+                <td>PKR ${Number(row['Total Value']).toLocaleString()}</td>
             </tr>
         `).join('');
     } catch (e) {
