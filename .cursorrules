@@ -1,0 +1,44 @@
+# SiteManager Project Rules
+
+## Currency and Localization
+- Always use PKR (Pakistani Rupees) for currency display, never USD or dollar signs
+- Format currency as: `PKR ${Number(value).toLocaleString()}` in JavaScript
+- Do not use `currency: 'USD'` in toLocaleString options
+
+## Code Style
+- Follow existing code patterns in the codebase
+- Use consistent indentation (spaces, not tabs)
+- Maintain existing naming conventions (camelCase for JavaScript, snake_case for Python)
+
+## Git Workflow
+- After making changes, always commit them with descriptive messages
+- Push changes to GitHub after committing
+- Use clear, descriptive commit messages that explain what was changed and why
+
+## File Structure
+- Keep Flask routes in `app.py`
+- Keep data processing logic in `data_processor.py`
+- Keep frontend JavaScript in `static/js/`
+- Keep styles in `static/css/`
+- Keep templates in `templates/`
+
+## API Endpoints
+- All API endpoints should return JSON
+- Handle errors gracefully with appropriate HTTP status codes
+- Include error messages in JSON responses
+
+## Data Processing
+- The Excel file `Data Jul-Nov 2025.xlsx` is the primary data source
+- Always validate data before processing
+- Handle missing or invalid data gracefully
+
+## Testing
+- Test changes in the browser after making modifications
+- Ensure the Flask server runs without errors
+- Verify all API endpoints return expected data
+
+## Dependencies
+- Keep `requirements.txt` updated with all Python dependencies
+- Use specific version numbers for dependencies when possible
+- Document any new dependencies added
+
